@@ -1,7 +1,7 @@
 version: "{{ docker_compose_version }}"
 
 services:
-  db-master:
+  mysql_master:
     image: mysql:8.4.4
     container_name: mysql_master
     restart: unless-stopped
@@ -31,7 +31,7 @@ services:
       - mysql_slave1_data:/var/lib/mysql
       - "{{ project_root }}/slave1.cnf:/etc/mysql/conf.d/slave.cnf:ro"
     depends_on:
-      db-master:
+      mysql_master:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p{{ mysql_root_password }}"]
@@ -51,7 +51,7 @@ services:
       - mysql_slave2_data:/var/lib/mysql
       - "{{ project_root }}/slave2.cnf:/etc/mysql/conf.d/slave.cnf:ro"
     depends_on:
-      db-master:
+      mysql_master:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p{{ mysql_root_password }}"]
@@ -66,14 +66,14 @@ services:
     container_name: wordpress_app
     restart: unless-stopped
     environment:
-      WORDPRESS_DB_HOST: db-master
+      WORDPRESS_DB_HOST: "{{ db_host }}"
       WORDPRESS_DB_USER: {{ database_user }}
       WORDPRESS_DB_PASSWORD: {{ database_password }}
       WORDPRESS_DB_NAME: {{ database_name }}
     volumes:
       - wordpress_data:/var/www/html
     depends_on:
-      db-master:
+      mysql_master:
         condition: service_healthy
     networks:
       - {{ docker_network }}

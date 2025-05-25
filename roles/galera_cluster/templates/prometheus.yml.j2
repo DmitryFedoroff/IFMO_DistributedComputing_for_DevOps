@@ -16,5 +16,5 @@ scrape_configs:
     static_configs:
       - targets:
 {% for node in galera_nodes %}
-        - "mariadb-exporter-{{ node.id }}:{{ mariadb_exporter_port }}"
+        - "mariadb_exporter_{{ node.id }}:{{ mariadb_exporter_port }}"
 {% endfor %}

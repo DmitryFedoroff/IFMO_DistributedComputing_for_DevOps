@@ -1,18 +1,20 @@
 {
-    "uid": "prom-targets-health",
-    "title": "Prometheus Targets / Экспортёры",
-    "description": "Статус всех целей Prometheus: зелёный — UP, красный — DOWN",
+    "uid": "prometheus-targets-advanced",
+    "title": "Prometheus Targets - Advanced Monitoring",
+    "description": "Comprehensive monitoring of all Prometheus scrape targets with performance metrics and availability history",
     "tags": [
         "prometheus",
         "health",
-        "exporters"
+        "exporters",
+        "monitoring",
+        "availability"
     ],
     "schemaVersion": 38,
-    "version": 2,
+    "version": 3,
     "refresh": "10s",
     "timezone": "browser",
     "time": {
-        "from": "now-30m",
+        "from": "now-1h",
         "to": "now"
     },
     "templating": {
@@ -29,22 +31,72 @@
                     "query": "label_values(up, job)",
                     "refId": "A"
                 },
+                "current": {
+                    "selected": true,
+                    "text": [
+                        "All"
+                    ],
+                    "value": [
+                        "$__all"
+                    ]
+                },
                 "includeAll": true,
                 "allValue": ".*",
-                "multi": true
+                "multi": true,
+                "refresh": 2,
+                "sort": 1
+            },
+            {
+                "name": "instance",
+                "type": "query",
+                "label": "Instance",
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "PBFA97CFB590B2093"
+                },
+                "query": {
+                    "query": "label_values(up{job=~\"$job\"}, instance)",
+                    "refId": "A"
+                },
+                "current": {
+                    "selected": true,
+                    "text": [
+                        "All"
+                    ],
+                    "value": [
+                        "$__all"
+                    ]
+                },
+                "includeAll": true,
+                "allValue": ".*",
+                "multi": true,
+                "refresh": 2,
+                "sort": 1
             }
         ]
     },
     "panels": [
         {
-            "type": "stat",
-            "title": "Не доступно целей",
-            "id": 1,
+            "type": "row",
+            "title": "Overview",
+            "collapsed": false,
             "gridPos": {
-                "h": 3,
-                "w": 6,
+                "h": 1,
+                "w": 24,
                 "x": 0,
                 "y": 0
+            },
+            "id": 20
+        },
+        {
+            "type": "stat",
+            "title": "Total Targets",
+            "id": 1,
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 1
             },
             "datasource": {
                 "type": "prometheus",
@@ -52,19 +104,118 @@
             },
             "targets": [
                 {
-                    "expr": "sum(1 - up{job=~\"$job\"})",
+                    "expr": "count(up{job=~\"$job\", instance=~\"$instance\"})",
                     "refId": "A"
                 }
             ],
             "fieldConfig": {
                 "defaults": {
                     "unit": "none",
+                    "decimals": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "blue",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "orientation": "horizontal",
+                "textMode": "auto",
+                "graphMode": "none",
+                "colorMode": "value"
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Targets UP",
+            "id": 2,
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "sum(up{job=~\"$job\", instance=~\"$instance\"})",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "decimals": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "orientation": "horizontal",
+                "textMode": "auto",
+                "graphMode": "area",
+                "colorMode": "value"
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Targets DOWN",
+            "id": 3,
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "sum(1 - up{job=~\"$job\", instance=~\"$instance\"})",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "decimals": 0,
                     "mappings": [
                         {
                             "type": "value",
                             "options": {
                                 "0": {
-                                    "text": "OK",
+                                    "text": "All OK",
                                     "color": "green"
                                 }
                             }
@@ -88,24 +239,26 @@
             },
             "options": {
                 "reduceOptions": {
+                    "values": false,
                     "calcs": [
                         "lastNotNull"
                     ]
                 },
                 "orientation": "horizontal",
+                "textMode": "auto",
                 "graphMode": "none",
-                "textMode": "auto"
+                "colorMode": "value"
             }
         },
         {
-            "type": "table",
-            "title": "Статус по каждому endpoint",
-            "id": 2,
+            "type": "gauge",
+            "title": "Overall Availability",
+            "id": 4,
             "gridPos": {
-                "h": 11,
-                "w": 24,
-                "x": 0,
-                "y": 3
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 1
             },
             "datasource": {
                 "type": "prometheus",
@@ -113,21 +266,178 @@
             },
             "targets": [
                 {
-                    "expr": "up{job=~\"$job\"}",
-                    "legendFormat": "{{job}} | {{instance}}",
+                    "expr": "(sum(up{job=~\"$job\", instance=~\"$instance\"}) / count(up{job=~\"$job\", instance=~\"$instance\"})) * 100",
                     "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "decimals": 1,
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "orange",
+                                "value": 80
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 95
+                            },
+                            {
+                                "color": "green",
+                                "value": 100
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "orientation": "auto",
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Avg Scrape Duration",
+            "id": 5,
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "avg(scrape_duration_seconds{job=~\"$job\", instance=~\"$instance\"}) * 1000",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "ms",
+                    "decimals": 2,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 100
+                            },
+                            {
+                                "color": "orange",
+                                "value": 500
+                            },
+                            {
+                                "color": "red",
+                                "value": 1000
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "orientation": "horizontal",
+                "textMode": "auto",
+                "graphMode": "area",
+                "colorMode": "value"
+            }
+        },
+        {
+            "type": "row",
+            "title": "Target Status Details",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+            },
+            "id": 21
+        },
+        {
+            "type": "table",
+            "title": "Target Status Table",
+            "id": 6,
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 0,
+                "y": 6
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "up{job=~\"$job\", instance=~\"$instance\"}",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "A"
+                },
+                {
+                    "expr": "scrape_duration_seconds{job=~\"$job\", instance=~\"$instance\"} * 1000",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "B"
+                },
+                {
+                    "expr": "scrape_samples_scraped{job=~\"$job\", instance=~\"$instance\"}",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "C"
+                },
+                {
+                    "expr": "time() - scrape_samples_post_metric_relabeling{job=~\"$job\", instance=~\"$instance\"}",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "D"
                 }
             ],
             "transformations": [
                 {
-                    "id": "labelsToFields",
+                    "id": "merge",
                     "options": {}
                 },
                 {
                     "id": "organize",
                     "options": {
                         "excludeByName": {
+                            "Time": true,
                             "__name__": true
+                        },
+                        "renameByName": {
+                            "job": "Job",
+                            "instance": "Instance",
+                            "Value #A": "Status",
+                            "Value #B": "Duration (ms)",
+                            "Value #C": "Samples",
+                            "Value #D": "Last Scrape (s ago)"
                         }
                     }
                 }
@@ -135,7 +445,8 @@
             "fieldConfig": {
                 "defaults": {
                     "custom": {
-                        "align": "center"
+                        "align": "center",
+                        "displayMode": "color-background-solid"
                     },
                     "mappings": [
                         {
@@ -151,18 +462,678 @@
                                 }
                             }
                         }
-                    ]
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
                 },
-                "overrides": []
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Job"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.width",
+                                "value": 120
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Duration (ms)"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "ms"
+                            },
+                            {
+                                "id": "decimals",
+                                "value": 1
+                            },
+                            {
+                                "id": "custom.displayMode",
+                                "value": "gradient-gauge"
+                            },
+                            {
+                                "id": "max",
+                                "value": 1000
+                            },
+                            {
+                                "id": "thresholds",
+                                "value": {
+                                    "mode": "absolute",
+                                    "steps": [
+                                        {
+                                            "color": "green",
+                                            "value": null
+                                        },
+                                        {
+                                            "color": "yellow",
+                                            "value": 100
+                                        },
+                                        {
+                                            "color": "red",
+                                            "value": 500
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Samples"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "none"
+                            },
+                            {
+                                "id": "custom.displayMode",
+                                "value": "basic"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Last Scrape (s ago)"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "s"
+                            },
+                            {
+                                "id": "decimals",
+                                "value": 0
+                            },
+                            {
+                                "id": "custom.displayMode",
+                                "value": "color-text"
+                            },
+                            {
+                                "id": "thresholds",
+                                "value": {
+                                    "mode": "absolute",
+                                    "steps": [
+                                        {
+                                            "color": "green",
+                                            "value": null
+                                        },
+                                        {
+                                            "color": "yellow",
+                                            "value": 30
+                                        },
+                                        {
+                                            "color": "red",
+                                            "value": 60
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
             },
             "options": {
                 "showHeader": true,
                 "sortBy": [
                     {
-                        "displayName": "up",
-                        "desc": true
+                        "displayName": "Status",
+                        "desc": false
                     }
-                ]
+                ],
+                "footer": {
+                    "show": false,
+                    "reducer": [
+                        "sum"
+                    ],
+                    "fields": ""
+                }
+            }
+        },
+        {
+            "type": "bargauge",
+            "title": "Targets by Job",
+            "id": 7,
+            "gridPos": {
+                "h": 10,
+                "w": 6,
+                "x": 12,
+                "y": 6
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "sum by (job) (up{job=~\"$job\", instance=~\"$instance\"})",
+                    "legendFormat": "{{job}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "decimals": 0,
+                    "min": 0,
+                    "max": 5,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "orange",
+                                "value": 1
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 3
+                            },
+                            {
+                                "color": "green",
+                                "value": 5
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "orientation": "horizontal",
+                "displayMode": "gradient",
+                "showUnfilled": true
+            }
+        },
+        {
+            "type": "piechart",
+            "title": "Scrape Duration Distribution",
+            "id": 8,
+            "gridPos": {
+                "h": 10,
+                "w": 6,
+                "x": 18,
+                "y": 6
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "scrape_duration_seconds{job=~\"$job\", instance=~\"$instance\"} * 1000",
+                    "legendFormat": "{{job}} - {{instance}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "values": [
+                        "value",
+                        "percent"
+                    ],
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "pieType": "donut",
+                "tooltip": {
+                    "mode": "single"
+                },
+                "displayLabels": []
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "ms",
+                    "decimals": 1
+                },
+                "overrides": []
+            }
+        },
+        {
+            "type": "row",
+            "title": "Availability History",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 16
+            },
+            "id": 22
+        },
+        {
+            "type": "timeseries",
+            "title": "Target Availability Timeline",
+            "id": 9,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 17
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "up{job=~\"$job\", instance=~\"$instance\"}",
+                    "legendFormat": "{{job}} - {{instance}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "lineInterpolation": "stepAfter",
+                        "lineWidth": 2,
+                        "fillOpacity": 20,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "never",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "axisLabel": "",
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "hideFrom": {
+                            "tooltip": false,
+                            "viz": false,
+                            "legend": false
+                        },
+                        "thresholdsStyle": {
+                            "mode": "area"
+                        }
+                    },
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "DOWN"
+                                },
+                                "1": {
+                                    "text": "UP"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "transparent",
+                                "value": 0.5
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    },
+                    "min": 0,
+                    "max": 1
+                },
+                "overrides": []
+            },
+            "options": {
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "none"
+                },
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [
+                        "mean",
+                        "lastNotNull"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "heatmap",
+            "title": "Availability Heatmap",
+            "id": 10,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 17
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "avg_over_time(up{job=~\"$job\", instance=~\"$instance\"}[5m])",
+                    "format": "time_series",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "calculate": false,
+                "cellGap": 2,
+                "color": {
+                    "mode": "scheme",
+                    "scheme": "RdYlGn",
+                    "steps": 128
+                },
+                "exemplars": {
+                    "color": "rgba(255,0,255,0.7)"
+                },
+                "filterValues": {
+                    "le": 1e-9
+                },
+                "legend": {
+                    "show": true
+                },
+                "rowsFrame": {
+                    "layout": "auto"
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "showColorScale": false
+                },
+                "yAxis": {
+                    "axisPlacement": "left",
+                    "reverse": false
+                }
+            }
+        },
+        {
+            "type": "row",
+            "title": "Performance Metrics",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 25
+            },
+            "id": 23
+        },
+        {
+            "type": "timeseries",
+            "title": "Scrape Duration Trend",
+            "id": 11,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 26
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "scrape_duration_seconds{job=~\"$job\", instance=~\"$instance\"} * 1000",
+                    "legendFormat": "{{job}} - {{instance}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "ms",
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "never",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "axisLabel": "",
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "hideFrom": {
+                            "tooltip": false,
+                            "viz": false,
+                            "legend": false
+                        },
+                        "thresholdsStyle": {
+                            "mode": "line"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 100
+                            },
+                            {
+                                "color": "red",
+                                "value": 500
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "none"
+                },
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "calcs": [
+                        "mean",
+                        "lastNotNull",
+                        "max"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "Scrape Samples Count",
+            "id": 12,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 26
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "scrape_samples_scraped{job=~\"$job\", instance=~\"$instance\"}",
+                    "legendFormat": "{{job}} - {{instance}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "never",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "axisLabel": "",
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "hideFrom": {
+                            "tooltip": false,
+                            "viz": false,
+                            "legend": false
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "none"
+                },
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "calcs": [
+                        "mean",
+                        "lastNotNull"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "row",
+            "title": "Alerts and Issues",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 34
+            },
+            "id": 24
+        },
+        {
+            "type": "text",
+            "title": "Target Alerts",
+            "id": 13,
+            "gridPos": {
+                "h": 6,
+                "w": 12,
+                "x": 0,
+                "y": 35
+            },
+            "options": {
+                "mode": "markdown",
+                "content": "## Alert Rules Status\n\nCurrently there are no alert rules configured.\n\nTo add alert rules:\n1. Go to Alerting → Alert rules\n2. Create rules for target availability\n3. They will appear here automatically"
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Failed Scrapes (Last 5m)",
+            "id": 14,
+            "gridPos": {
+                "h": 6,
+                "w": 12,
+                "x": 12,
+                "y": 35
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+            },
+            "targets": [
+                {
+                    "expr": "sum(increase(up{job=~\"$job\", instance=~\"$instance\"}[5m] == 0)) OR on() vector(0)",
+                    "legendFormat": "Failed Scrapes",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "decimals": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 1
+                            },
+                            {
+                                "color": "red",
+                                "value": 10
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "orientation": "horizontal",
+                "textMode": "auto",
+                "graphMode": "area",
+                "colorMode": "value"
             }
         }
     ]

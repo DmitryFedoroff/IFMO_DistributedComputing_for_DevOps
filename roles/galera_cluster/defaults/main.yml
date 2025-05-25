@@ -38,7 +38,7 @@ haproxy_exporter_image: "prom/haproxy-exporter:latest"
 haproxy_exporter_port: 9101
 haproxy_exporter_container_name: "haproxy_exporter"
 
-mariadb_exporter_image: "prom/mysqld-exporter:latest"
+mariadb_exporter_image: "prom/mysqld-exporter:v0.14.0"
 mariadb_exporter_port: 9104
 
 prometheus_config_path: "{{ prometheus_data_path }}/prometheus.yml"
