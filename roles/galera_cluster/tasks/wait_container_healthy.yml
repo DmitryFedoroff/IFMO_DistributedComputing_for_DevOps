@@ -6,6 +6,7 @@
     restart_policy: unless-stopped
     env:
       MARIADB_ROOT_PASSWORD: "{{ db_root_password }}"
+      MARIADB_ROOT_HOST: "%"
       MARIADB_USER: "{{ mariadb_user }}"
       MARIADB_PASSWORD: "{{ mariadb_password }}"
       MARIADB_DATABASE: "{{ wordpress_db_name }}"
