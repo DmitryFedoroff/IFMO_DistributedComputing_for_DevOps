@@ -1,18 +1,24 @@
 ---
-- name: Create HAProxy cluster-check user (no password)
+- name: Create HAProxy cluster-check user (no password) on all Galera nodes
   community.mysql.mysql_query:
-    login_host: "{{ galera_nodes[0].name }}"
+    login_host: "{{ item.name }}"
     login_user: root
     login_password: "{{ db_root_password }}"
     query:
       - "CREATE USER IF NOT EXISTS '{{ haproxy_check_user }}'@'%' IDENTIFIED BY '';"
       - "GRANT USAGE ON *.* TO '{{ haproxy_check_user }}'@'%';"
+  loop: "{{ galera_nodes }}"
+  loop_control:
+    loop_var: item
 
-- name: Create exporter user with PROCESS & SELECT privilege
+- name: Create exporter user with PROCESS & SELECT privilege on all Galera nodes
   community.mysql.mysql_query:
-    login_host: "{{ galera_nodes[0].name }}"
+    login_host: "{{ item.name }}"
     login_user: root
     login_password: "{{ db_root_password }}"
     query:
       - "CREATE USER IF NOT EXISTS '{{ monitor_user }}'@'%' IDENTIFIED BY '{{ monitor_password }}';"
       - "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '{{ monitor_user }}'@'%';"
+  loop: "{{ galera_nodes }}"
+  loop_control:
+    loop_var: item

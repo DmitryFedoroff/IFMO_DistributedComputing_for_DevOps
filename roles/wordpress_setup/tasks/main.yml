@@ -1,4 +1,13 @@
 ---
+- name: Wait until MySQL master is healthy
+  community.docker.docker_container_info:
+    name: "{{ db_host }}"
+  register: mysql_info
+  until: mysql_info.container.State.Health.Status == 'healthy'
+  retries: 30
+  delay: 5
+  changed_when: false
+
 - name: Wait until wordpress_app is healthy or simply running
   community.docker.docker_container_info:
     name: wordpress_app
@@ -15,10 +24,7 @@
   community.docker.docker_container_exec:
     container: wordpress_app
     command: >
-      bash -c "command -v wp ||
-               curl -s -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar &&
-               chmod +x wp-cli.phar &&
-               mv wp-cli.phar /usr/local/bin/wp"
+      bash -c "command -v wp || (curl -s -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp)"
   register: wp_cli_install
   changed_when: "'wp-cli.phar' in wp_cli_install.stdout"
 
