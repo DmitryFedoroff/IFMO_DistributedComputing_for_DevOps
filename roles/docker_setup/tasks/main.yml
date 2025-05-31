@@ -73,6 +73,32 @@
       5:28.0.4-1~ubuntu.{{ ansible_distribution_version }}~{{ ansible_distribution_release }}
     compose_plugin_min_version: "2.20.0"
 
+- name: Ensure /var/lib/apt exists
+  ansible.builtin.file:
+    path: /var/lib/apt
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Ensure /var/lib/apt/lists exists
+  ansible.builtin.file:
+    path: /var/lib/apt/lists
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Ensure /var/cache/apt/archives exists
+  ansible.builtin.file:
+    path: /var/cache/apt/archives
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Updating the APT cache (creating package indexes)
+  ansible.builtin.apt:
+    update_cache: true
+  become: true
+
 - name: Add Docker official GPG key
   ansible.builtin.apt_key:
     url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
@@ -129,6 +155,13 @@
     name: docker
     state: started
     enabled: true
+  become: true
+
+- name: Add Ansible user to the docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
   become: true
 
 - name: Ensure project directory exists

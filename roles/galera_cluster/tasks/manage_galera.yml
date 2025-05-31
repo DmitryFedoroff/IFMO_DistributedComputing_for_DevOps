@@ -6,7 +6,6 @@
     restart_policy: unless-stopped
     env:
       MARIADB_ROOT_PASSWORD: "{{ db_root_password }}"
-      MARIADB_ROOT_HOST: "%"
       MARIADB_USER: "{{ mariadb_user }}"
       MARIADB_PASSWORD: "{{ mariadb_password }}"
       MARIADB_DATABASE: "{{ wordpress_db_name }}"
@@ -14,6 +13,8 @@
       MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP: "yes"
       MARIADB_GALERA_SST_METHOD: "{{ galera_sst_method }}"
       MARIADB_GALERA_MARIABACKUP_PASSWORD: "{{ db_root_password }}"
+      MARIADB_ENABLE_LDAP: "no"
+      MARIADB_SKIP_TEST_DB: "no"
     volumes:
       - "galera_data_node_1:/bitnami/mariadb/data"
     networks:
@@ -22,7 +23,7 @@
       test:
         [
           "CMD",
-          "mysqladmin",
+          "/opt/bitnami/mariadb/bin/mysqladmin",
           "ping",
           "-h",
           "localhost",
@@ -31,6 +32,34 @@
       interval: 10s
       timeout: 5s
       retries: 5
+  when: deploy_fresh_cluster or perform_full_migration
+
+- name: Wait until first node is healthy
+  community.docker.docker_container_info:
+    name: "{{ galera_nodes[0].name }}"
+  register: first_node_info
+  until: first_node_info.container.State.Health.Status == 'healthy'
+  retries: 30
+  delay: 5
+  when: deploy_fresh_cluster or perform_full_migration
+
+- name: Wait for MariaDB to be fully ready on first node
+  ansible.builtin.pause:
+    seconds: 15
+  when: deploy_fresh_cluster or perform_full_migration
+
+- name: Grant root access from all hosts on first node
+  community.docker.docker_container_exec:
+    container: "{{ galera_nodes[0].name }}"
+    command: >
+      /bin/bash -c "/opt/bitnami/mariadb/bin/mariadb -u root -p{{ db_root_password }} -e
+      \"CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '{{ db_root_password }}';
+      GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+      FLUSH PRIVILEGES;\""
+  register: grant_result
+  retries: 5
+  delay: 10
+  until: grant_result.rc == 0
   when: deploy_fresh_cluster or perform_full_migration
 
 - name: Ensure every node exists and is healthy

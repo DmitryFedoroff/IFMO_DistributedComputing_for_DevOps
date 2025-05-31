@@ -25,7 +25,7 @@ galera_nodes:
   - { name: "{{ db4_host | default('galera_node_4') }}", id: 4 }
   - { name: "{{ db5_host | default('galera_node_5') }}", id: 5 }
 
-galera_image: "bitnami/mariadb-galera:latest"
+galera_image: "bitnami/mariadb-galera:11.0"
 galera_sst_method: "rsync"
 
 loadbalancer: "haproxy"

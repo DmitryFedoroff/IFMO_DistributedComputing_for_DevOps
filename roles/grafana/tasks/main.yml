@@ -3,35 +3,42 @@
   ansible.builtin.file:
     path: "{{ grafana_data_path }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Ensure Grafana dashboards dir exists
   ansible.builtin.file:
     path: "{{ grafana_dashboards_path }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: true
 
 - name: Copy Grafana datasource definition
   ansible.builtin.copy:
     src: datasource.yml
     dest: "{{ grafana_data_path }}/datasource.yml"
-    mode: '0644'
+    mode: "0644"
   become: true
 
 - name: Copy Grafana dashboards provisioning config
   ansible.builtin.copy:
     src: dashboards.yml
     dest: "{{ grafana_dashboards_path }}/dashboards.yml"
-    mode: '0644'
+    mode: "0644"
   become: true
 
 - name: Copy default Docker dashboard JSON
   ansible.builtin.copy:
     src: dashboard.json
     dest: "{{ grafana_dashboards_path }}/docker_dashboard.json"
-    mode: '0644'
+    mode: "0644"
+  become: true
+
+- name: Copy Prometheus Targets dashboard JSON
+  ansible.builtin.copy:
+    src: prometheus_targets_dashboard.json
+    dest: "{{ grafana_dashboards_path }}/prometheus_targets_dashboard.json"
+    mode: "0644"
   become: true
 
 - name: Run Grafana container

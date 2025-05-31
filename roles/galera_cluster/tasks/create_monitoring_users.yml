@@ -1,24 +1,43 @@
 ---
-- name: Create HAProxy cluster-check user (no password) on all Galera nodes
-  community.mysql.mysql_query:
-    login_host: "{{ item.name }}"
-    login_user: root
-    login_password: "{{ db_root_password }}"
-    query:
-      - "CREATE USER IF NOT EXISTS '{{ haproxy_check_user }}'@'%' IDENTIFIED BY '';"
-      - "GRANT USAGE ON *.* TO '{{ haproxy_check_user }}'@'%';"
+- name: Wait for all nodes to be ready for SQL commands
+  community.docker.docker_container_exec:
+    container: "{{ item.name }}"
+    command: >
+      /bin/bash -c "for i in {1..30}; do
+      if /opt/bitnami/mariadb/bin/mysqladmin ping -h localhost -p{{ db_root_password }} 2>/dev/null; then
+        exit 0;
+      fi;
+      sleep 2;
+      done;
+      exit 1"
   loop: "{{ galera_nodes }}"
-  loop_control:
-    loop_var: item
+  register: nodes_ready
+  changed_when: false
+
+- name: Create HAProxy cluster-check user (no password) on all Galera nodes
+  community.docker.docker_container_exec:
+    container: "{{ item.name }}"
+    command: >
+      /bin/bash -c "/opt/bitnami/mariadb/bin/mariadb -u root -p{{ db_root_password }} -e
+      \"CREATE USER IF NOT EXISTS '{{ haproxy_check_user }}'@'%' IDENTIFIED BY '';
+      GRANT USAGE ON *.* TO '{{ haproxy_check_user }}'@'%';
+      FLUSH PRIVILEGES;\""
+  loop: "{{ galera_nodes }}"
+  register: haproxy_user_result
+  retries: 3
+  delay: 5
+  until: haproxy_user_result.rc == 0
 
 - name: Create exporter user with PROCESS & SELECT privilege on all Galera nodes
-  community.mysql.mysql_query:
-    login_host: "{{ item.name }}"
-    login_user: root
-    login_password: "{{ db_root_password }}"
-    query:
-      - "CREATE USER IF NOT EXISTS '{{ monitor_user }}'@'%' IDENTIFIED BY '{{ monitor_password }}';"
-      - "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '{{ monitor_user }}'@'%';"
+  community.docker.docker_container_exec:
+    container: "{{ item.name }}"
+    command: >
+      /bin/bash -c "/opt/bitnami/mariadb/bin/mariadb -u root -p{{ db_root_password }} -e
+      \"CREATE USER IF NOT EXISTS '{{ monitor_user }}'@'%' IDENTIFIED BY '{{ monitor_password }}';
+      GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '{{ monitor_user }}'@'%';
+      FLUSH PRIVILEGES;\""
   loop: "{{ galera_nodes }}"
-  loop_control:
-    loop_var: item
+  register: exporter_user_result
+  retries: 3
+  delay: 5
+  until: exporter_user_result.rc == 0

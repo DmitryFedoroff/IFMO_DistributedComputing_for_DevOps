@@ -1,7 +1,7 @@
 all:
   hosts:
     carrier:
-      ansible_host: 83.220.168.126
+      ansible_host: 109.172.30.98
       ansible_user: ifmo_ansible_user
       ansible_password: ifmo_ansible_password
       ansible_become_method: sudo

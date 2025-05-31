@@ -6,17 +6,31 @@
     restart_policy: unless-stopped
     env:
       MARIADB_ROOT_PASSWORD: "{{ db_root_password }}"
-      MARIADB_ROOT_HOST: "%"
       MARIADB_USER: "{{ mariadb_user }}"
       MARIADB_PASSWORD: "{{ mariadb_password }}"
       MARIADB_DATABASE: "{{ wordpress_db_name }}"
       MARIADB_GALERA_CLUSTER_ADDRESS: "gcomm://{{ galera_nodes | map(attribute='name') | join(',') }}"
       MARIADB_GALERA_SST_METHOD: "{{ galera_sst_method }}"
       MARIADB_GALERA_MARIABACKUP_PASSWORD: "{{ db_root_password }}"
+      MARIADB_ENABLE_LDAP: "no"
+      MARIADB_SKIP_TEST_DB: "no"
     volumes:
       - "galera_data_node_{{ galera_node.id }}:/bitnami/mariadb/data"
     networks:
       - name: "{{ docker_network }}"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/bitnami/mariadb/bin/mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-p{{ db_root_password }}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     state: started
 
 - name: Wait until {{ galera_node.name }} container appears healthy or simply running
@@ -30,7 +44,7 @@
       node_state.container.State.Health.Status == 'healthy') or
       (node_state.container.State.Health is not defined)
       )
-  retries: 10
+  retries: 30
   delay: 10
   changed_when: false
 
@@ -49,3 +63,30 @@
     delay: 2
     timeout: 180
   changed_when: false
+
+- name: Wait for MariaDB socket to be ready on {{ galera_node.name }}
+  community.docker.docker_container_exec:
+    container: "{{ galera_node.name }}"
+    command: >
+      /bin/bash -c "for i in {1..30}; do
+      if /opt/bitnami/mariadb/bin/mysqladmin ping -h localhost -p{{ db_root_password }} 2>/dev/null; then
+        exit 0;
+      fi;
+      sleep 2;
+      done;
+      exit 1"
+  register: socket_check
+  changed_when: false
+
+- name: Grant root access from all hosts on {{ galera_node.name }}
+  community.docker.docker_container_exec:
+    container: "{{ galera_node.name }}"
+    command: >
+      /bin/bash -c "/opt/bitnami/mariadb/bin/mariadb -u root -p{{ db_root_password }} -e
+      \"CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '{{ db_root_password }}';
+      GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+      FLUSH PRIVILEGES;\""
+  register: grant_result
+  retries: 5
+  delay: 10
+  until: grant_result.rc == 0
